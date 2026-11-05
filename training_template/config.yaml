@@ -1,0 +1,120 @@
+# Kimi-K31 DSA: 8 layers, 64 routed experts, CP1/EP8, random BF16 initialization.
+# Set tokenizer_name_or_path and dataset_path to your local resources.
+model:
+  model_name_or_path: /opt/FSDPTurbo-k31/examples/kimi_k31
+  tokenizer_name_or_path: /models/kimi-k31
+  torch_dtype: bf16
+  attn_implementation: flash_attention_2
+optimizer:
+  optimizer_type: AdamWSwap
+  weight_decay: 0.1
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_epsilon: 1e-8
+  lr: 1.0e-05
+  warmup_ratio: 0.03
+  lr_scheduler_type: CosineAnnealingLR
+  min_lr: 1.0e-05
+  clip_grad: 1.0
+  clip_grad_norm_type: 2.0
+  param_prefetch: true
+  clip_grad_keep_on_device: true
+run:
+  seed: 42
+  max_steps: 100
+  num_train_epochs: 1
+  gradient_accumulation_steps: 1
+  logging_steps: 1
+  profile:
+    enabled: false
+    wait_steps: 19
+    warmup_steps: 1
+    active_steps: 2
+    repeat: 1
+    skip_first: 0
+    output_dir: /outputs/profile
+    record_shapes: false
+    profile_memory: false
+    with_stack: false
+  memory_snapshot:
+    enable: false
+    start_step: 22
+    end_step: 22
+    save_path: /outputs/memory_snapshot
+    dump_ranks:
+    - 0
+    stacks: python
+    max_entries: 100000
+    mem_info: true
+  deterministic: true
+checkpoint:
+  output_dir: /outputs/checkpoints
+  save_steps: 10000
+  strict: true
+  save_optim: true
+  load_optim: true
+  resume_from_checkpoint: null
+data:
+  dataset_path: /data/dataset.jsonl
+  dataset_config: null
+  text_column: text
+  image_column: images
+  media_key: medias
+  use_data_balance: false
+  conversation_column: messages
+  split: train
+  batch_size: 1
+  max_seq_length: 2048
+  num_workers: 0
+  pin_memory: true
+  shuffle: false
+  is_multimodal: true
+distributed:
+  data_parallel_size: 1
+  fully_shard_parallel_size: 8
+  tensor_parallel_size: 1
+  ulysses_parallel_size: 1
+  kcp_parallel_size: 1
+  expert_parallel_size: 8
+  expert_fully_shard_parallel_size: 1
+  expert_data_parallel_size: 1
+  fsdp_plan:
+    ignored_modules: []
+    apply_modules:
+      vision_tower.encoder.blocks.{*}: {}
+      mm_projector: {}
+      language_model.model.embed_tokens: {}
+      language_model.model.layers.{*}: {}
+      language_model.lm_head: {}
+    cpu_offload: false
+    param_dtype: bf16
+    reduce_dtype: fp32
+    output_dtype: null
+    cast_forward_inputs: true
+    num_to_forward_prefetch: 1
+    num_to_backward_prefetch: 1
+    hook_modules:
+    - language_model.model.layers.{*}
+    fsdp_implementation: native
+  tp_plan:
+    colwise_parallel:
+    - '*.q_proj'
+    - '*.k_proj'
+    - '*.v_proj'
+    rowwise_parallel:
+    - '*.o_proj'
+    sequence_parallel: []
+  ep_plan:
+    apply_modules:
+    - language_model.model.layers.{*}.block_sparse_moe.experts
+    fixed_router: false
+    dispatcher: custom_ep_forward_fused
+  cp_plan: {}
+module_patches: []
+memory:
+  recompute: false
+  recompute_plan:
+  - language_model.model.layers.{*}
+  - vision_tower.encoder.blocks.{*}
+quantization:
+  quantization_plan: null

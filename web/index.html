@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>eNodeDone · 多机任务工作台</title><link rel="stylesheet" href="/style.css"><script defer src="/vendor/plotly-cartesian-4.1.1.min.js"></script><script defer src="/vendor/plotly-locale-zh-cn-4.1.1.js"></script><script type="module" src="/app.js"></script></head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/"><span class="brand-icon">⌘</span><span>eNodeDone<small>MULTI-NODE WORKSPACE</small></span></a>
+    <div class="workspace"><span class="workspace-avatar">W</span><div>本地工作空间<small>Local workspace</small></div><span class="online-dot"></span></div>
+    <button class="new-task primary" id="new-task">＋ 新建任务 <kbd>N</kbd></button>
+    <div class="side-label">任务库 <button id="open-task" title="导入任务 JSON">↗</button></div>
+    <input id="task-search" class="search" placeholder="搜索任务…" aria-label="搜索任务">
+    <div id="task-list"></div>
+    <div class="side-label template-label">任务模板</div><div id="template-list"></div>
+
+  </aside>
+  <main>
+    <header class="topbar"><div class="breadcrumb">工作空间 <span>/</span> 多机任务 <span>/</span> <b id="crumb-name">加载中</b></div><div class="top-actions"><button id="delete-task" class="delete-task" disabled>删除任务</button><button id="open-file">导入任务</button><button id="copy-task">复制任务</button><button id="save-task">保存任务</button><span class="top-action-divider" aria-hidden="true"></span><button id="connect-nodes" disabled>建立连接</button><button id="disconnect-nodes" disabled>关闭连接</button><button id="run-task" class="primary" disabled>▷ 运行任务</button><button id="stop-task" class="danger" hidden>■ 停止</button></div></header>
+    <div class="page">
+      <div class="page-heading"><div><div class="eyebrow">DISTRIBUTED ORCHESTRATION</div><input id="task-name" class="title-input" aria-label="任务名称"></div><div class="heading-meta"><span id="overall-status" class="badge pending">待运行</span><small id="saved-state">本地任务文件</small></div></div>
+      <section class="configuration panel">
+        <div class="section-header"><h2><span class="section-icon">⌘</span> 集群配置</h2><div><span id="machine-count" class="subtle">8 台机器</span><button id="refresh-csv" class="text-button">↻ 重新读取 CSV</button></div></div>
+        <div class="config-grid">
+          <label>机器清单 CSV<div class="csv-control"><button id="csv-open" title="用系统默认程序打开 CSV">▤ <span id="csv-name">machines.csv</span> ↗</button><button id="csv-select" title="选择另一个 CSV">选择</button></div></label>
+          <label>Master IP<select id="master-ip"></select></label>
+          <label>机器数<input id="machine-limit" type="text" inputmode="numeric" pattern="[1-9][0-9]*" required></label>
+          <label class="wide-field">Master 工作目录<input id="master-dir" placeholder="/mnt/share/kimi-frontiers"></label>
+        </div>
+      </section>
+      <section class="ssh-section"><div class="section-header"><h2>SSH 状态</h2><span id="ssh-count" class="subtle">0/0 已连接</span></div><div id="ssh-board" class="pipeline-board"></div></section>
+      <section class="pipeline-section">
+        <div class="section-header"><h2>Pipeline 看板 <span id="pipeline-count" class="count-pill">7</span></h2><div class="legend"><span><i class="pending"></i>待运行</span><span><i class="running"></i>运行中</span><span><i class="success"></i>成功</span><span><i class="failed"></i>失败</span><button id="expand-board" class="text-button">⛶ 展开</button></div></div>
+
+        <div id="pipeline-board" class="pipeline-board"></div>
+      </section>
+      <section class="panel table-panel"><div class="section-header"><h2>节点编排</h2><button id="add-node">＋ 添加节点</button></div><div class="table-scroll"><table class="nodes-table"><thead><tr><th class="order-col">顺序</th><th>名称 / 执行范围</th><th>脚本所在 IP / 路径</th><th>Key-values</th><th>状态</th><th>管理</th></tr></thead><tbody id="node-rows"></tbody></table></div></section>
+      <section id="summary-panel" class="panel summary-panel"><div class="section-header"><h2>数据可视化</h2><span id="summary-policy" class="subtle"></span></div><div id="visualization-gallery" hidden></div><div id="summary-content" hidden><div id="summary-metrics" class="metrics"></div><div class="chart-header"><div class="chart-tabs"><button data-chart="seconds" class="active">Step time</button><button data-chart="loss">Loss</button><button data-chart="grad_norm">Grad norm</button></div><span id="chart-note" class="subtle"></span></div><div id="metric-chart"></div><details class="summary-details"><summary>查看 warmup 后逐步指标</summary><div id="summary-table" class="table-scroll"></div></details></div></section>
+      <section class="console-panel"><div class="console-header"><div class="console-tabs"><button class="active" data-console="host">Master Console</button><button data-console="logs">运行日志</button></div><div><button id="clear-console" title="清空 console">清空</button><button id="toggle-console">收起</button></div></div><div id="console-body"><div class="terminal-caption"><span id="console-caption"></span></div><pre id="console-output" role="log" aria-live="off"></pre><form id="console-form"><span class="terminal-prompt">master:~ $</span><input id="console-input" autocomplete="off" spellcheck="false" placeholder="输入远程命令..." aria-label="Console 输入"><button type="submit">↵ 发送</button></form></div></section>
+      <footer class="page-footer"><span>eNodeDone <b>LOCAL / SSH</b></span><button id="open-folder" class="text-button">打开任务文件夹 ↗</button><span id="task-path"></span></footer>
+    </div>
+  </main>
+  <dialog id="dialog"><form method="dialog" class="dialog-shell"><div class="dialog-heading"><h2 id="dialog-title"></h2><button value="cancel" type="button" id="dialog-close" class="icon-button" aria-label="关闭">×</button></div><div id="dialog-content"></div><div id="dialog-actions" class="dialog-actions"></div></form></dialog>
+  <div id="drawer-backdrop" hidden></div><aside id="detail-drawer" class="detail-drawer" hidden><header><div><div class="eyebrow">STAGE INSPECTOR</div><h2 id="detail-title"></h2></div><button id="close-drawer" class="icon-button">×</button></header><div id="detail-content"></div></aside>
+  <div id="toast" role="status" hidden></div>
+</body></html>
